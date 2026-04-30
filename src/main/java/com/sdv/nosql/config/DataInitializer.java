@@ -6,6 +6,7 @@ import com.sdv.nosql.model.Leg;
 import com.sdv.nosql.model.Offer;
 import com.sdv.nosql.repository.OfferRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class DataInitializer implements CommandLineRunner {
 
     private final MongoTemplate mongoTemplate;
@@ -28,13 +30,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-
-        System.out.println("Mongo database = " + mongoTemplate.getDb().getName());
-
-        System.out.println("DataInitializer is running");
-
-        System.out.println("Offers count before insert: " + offerRepository.count());
-
+        log.info("DataInitializer starting, database: {}", mongoTemplate.getDb().getName());
 
         mongoTemplate.indexOps(Offer.class)
                 .ensureIndex(new Index()
@@ -49,16 +45,18 @@ public class DataInitializer implements CommandLineRunner {
                         .onField("activity.title")
                         .build());
 
-        if (offerRepository.count() == 0) {
-            Offer offer = getOffer();
+        long count = offerRepository.count();
+        log.info("Offers in DB: {}", count);
 
-            offerRepository.save(offer);
+        if (count == 0) {
+            offerRepository.save(buildSampleOffer());
+            log.info("Sample offer inserted");
         }
 
-        this.initNeo4j();
+        initNeo4j();
     }
 
-    private static Offer getOffer() {
+    private static Offer buildSampleOffer() {
         Offer offer = new Offer();
         offer.setFrom("PAR");
         offer.setTo("TYO");
@@ -67,9 +65,7 @@ public class DataInitializer implements CommandLineRunner {
         offer.setProvider("AirZen");
         offer.setPrice(BigDecimal.valueOf(750));
         offer.setCurrency("EUR");
-        offer.setLegs(List.of(
-                new Leg("AZ123", "PAR", "TYO", "13h")
-        ));
+        offer.setLegs(List.of(new Leg("AZ123", "PAR", "TYO", "13h")));
         offer.setHotel(new Hotel("Tokyo Central Hotel", 14, BigDecimal.valueOf(900)));
         offer.setActivity(new Activity("Visite de Shibuya", BigDecimal.valueOf(40)));
         return offer;
@@ -77,13 +73,14 @@ public class DataInitializer implements CommandLineRunner {
 
     private void initNeo4j() {
         neo4jClient.query("""
-        MERGE (par:City {code:'PAR', name:'Paris', country:'FR'})
-        MERGE (tyo:City {code:'TYO', name:'Tokyo', country:'JP'})
-        MERGE (osa:City {code:'OSA', name:'Osaka', country:'JP'})
-        MERGE (sel:City {code:'SEL', name:'Seoul', country:'KR'})
-        MERGE (tyo)-[:NEAR {weight:0.9}]->(osa)
-        MERGE (tyo)-[:NEAR {weight:0.7}]->(sel)
-        MERGE (par)-[:NEAR {weight:0.8}]->(tyo)
-    """).run();
+            MERGE (par:City {code:'PAR', name:'Paris', country:'FR'})
+            MERGE (tyo:City {code:'TYO', name:'Tokyo', country:'JP'})
+            MERGE (osa:City {code:'OSA', name:'Osaka', country:'JP'})
+            MERGE (sel:City {code:'SEL', name:'Seoul', country:'KR'})
+            MERGE (tyo)-[:NEAR {weight:0.9}]->(osa)
+            MERGE (tyo)-[:NEAR {weight:0.7}]->(sel)
+            MERGE (par)-[:NEAR {weight:0.8}]->(tyo)
+            """).run();
+        log.info("Neo4j city graph initialised");
     }
 }

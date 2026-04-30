@@ -1,5 +1,6 @@
 package com.sdv.nosql.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -7,5 +8,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class LoginResponse {
     private String token;
-    private Integer expires_in;
+    @JsonProperty("expires_in")
+    private int expiresIn;
 }
