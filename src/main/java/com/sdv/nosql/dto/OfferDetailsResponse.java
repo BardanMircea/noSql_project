@@ -13,5 +13,6 @@ import java.util.List;
 public class OfferDetailsResponse {
 
     private Offer offer;
-    private List<String> relatedOffers;
+    /** IATA codes of cities geographically near the destination, sourced from Neo4j. */
+    private List<String> nearbyCities;
 }
