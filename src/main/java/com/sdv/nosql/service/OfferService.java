@@ -3,7 +3,9 @@ package com.sdv.nosql.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sdv.nosql.dto.CreateOfferRequest;
 import com.sdv.nosql.dto.OfferDetailsResponse;
+import com.sdv.nosql.dto.OfferResponse;
 import com.sdv.nosql.exception.NotFoundException;
 import com.sdv.nosql.model.Offer;
 import com.sdv.nosql.repository.OfferRepository;
@@ -31,7 +33,7 @@ public class OfferService {
     private final Neo4jClient neo4jClient;
     private final MetricsService metricsService;
 
-    public List<Offer> searchOffers(String from, String to, Integer limit, String q) {
+    public List<OfferResponse> searchOffers(String from, String to, Integer limit, String q) {
         long start = System.currentTimeMillis();
         try {
             // Cache key includes all query params to avoid returning stale/wrong results
@@ -40,7 +42,7 @@ public class OfferService {
 
             if (cached != null) {
                 try {
-                    List<Offer> result = objectMapper.readValue(cached, new TypeReference<>() {});
+                    List<OfferResponse> result = objectMapper.readValue(cached, new TypeReference<>() {});
                     metricsService.recordCacheHit();
                     return result;
                 } catch (JsonProcessingException e) {
@@ -60,13 +62,15 @@ public class OfferService {
                 offers = offerRepository.findByFromAndToOrderByPriceAsc(from, to, pageable);
             }
 
+            List<OfferResponse> results = offers.stream().map(OfferResponse::from).toList();
+
             try {
-                redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(offers), Duration.ofSeconds(60));
+                redisTemplate.opsForValue().set(cacheKey, objectMapper.writeValueAsString(results), Duration.ofSeconds(60));
             } catch (JsonProcessingException e) {
                 log.warn("Failed to cache search results for key {}", cacheKey, e);
             }
 
-            return offers;
+            return results;
         } finally {
             metricsService.recordOffersTime(System.currentTimeMillis() - start);
         }
@@ -115,7 +119,19 @@ public class OfferService {
                 .toList();
     }
 
-    public Offer createOffer(Offer offer) {
+    public OfferResponse createOffer(CreateOfferRequest request) {
+        Offer offer = new Offer();
+        offer.setFrom(request.getFrom());
+        offer.setTo(request.getTo());
+        offer.setDepartDate(request.getDepartDate());
+        offer.setReturnDate(request.getReturnDate());
+        offer.setProvider(request.getProvider());
+        offer.setPrice(request.getPrice());
+        offer.setCurrency(request.getCurrency());
+        offer.setLegs(request.getLegs());
+        offer.setHotel(request.getHotel());
+        offer.setActivity(request.getActivity());
+
         Offer saved = offerRepository.save(offer);
 
         // Evict all cached searches for this route so the new offer appears immediately.
@@ -136,6 +152,6 @@ public class OfferService {
             log.warn("Failed to publish offer creation event for {}", saved.getId(), e);
         }
 
-        return saved;
+        return OfferResponse.from(saved);
     }
 }

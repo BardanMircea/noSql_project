@@ -1,8 +1,10 @@
 package com.sdv.nosql.controller;
 
+import com.sdv.nosql.dto.CreateOfferRequest;
 import com.sdv.nosql.dto.OfferDetailsResponse;
-import com.sdv.nosql.model.Offer;
+import com.sdv.nosql.dto.OfferResponse;
 import com.sdv.nosql.service.OfferService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +19,7 @@ public class OfferController {
     private final OfferService offerService;
 
     @GetMapping
-    public List<Offer> searchOffers(
+    public List<OfferResponse> searchOffers(
             @RequestParam String from,
             @RequestParam String to,
             @RequestParam(defaultValue = "10") Integer limit,
@@ -33,7 +35,7 @@ public class OfferController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Offer createOffer(@RequestBody Offer offer) {
-        return offerService.createOffer(offer);
+    public OfferResponse createOffer(@Valid @RequestBody CreateOfferRequest request) {
+        return offerService.createOffer(request);
     }
 }
