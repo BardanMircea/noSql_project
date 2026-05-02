@@ -1,4 +1,4 @@
-! Pull / Clone the Master branch !
+! Pull / Clone la branche master !
 
 ⚙️ Prérequis Docker + Docker Compose Java 17+ / Maven
 
