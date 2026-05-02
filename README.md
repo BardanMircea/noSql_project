@@ -1,4 +1,4 @@
-⚙️ Prérequis Docker + Docker Compose Java 17+ / Maven
+⚙️ Prérequis Docker + Docker Compose, Java 17+ / Maven
 
 🐳 1. Lancer les bases (Docker)
 
